@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charity Hub — Event Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        header { background: #f8f9fa; padding: 15px 0; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+        nav { display: flex; gap: 15px; justify-content: center; }
+        nav a { text-decoration: none; color: #007bff; font-weight: bold; }
+        .hero-image { width: 100%; height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; }
+        .event-header { margin-bottom: 20px; }
+        .event-title { font-size: 2em; margin-bottom: 10px; color: #2c3e50; }
+        .event-meta { color: #666; font-size: 0.9em; margin-bottom: 15px; }
+        .badge { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; }
+        .section { margin-bottom: 30px; }
+        .progress-container { background: #eee; border-radius: 10px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; }
+        .progress-bar { background: #28a745; height: 100%; width: 0%; transition: width 0.5s; }
+        .ticket-list { list-style: none; padding: 0; }
+        .ticket-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-register { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .btn-register:hover { background: #218838; }
+        .loading { text-align: center; padding: 50px; font-size: 1.2em; color: #666; }
+        .error { color: red; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <a href="./index.html">💝 Charity Hub</a>
+            <a href="./index.html">Home</a>
+            <a href="./search.html">Search Events</a>
+        </nav>
+    </header>
+
+    <div class="container" id="app">
+        <div class="loading">Loading event details...</div>
+    </div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('id');
+    const appDiv = document.getElementById('app');
+
+    if (!eventId) {
+        appDiv.innerHTML = '<div class="error">Error: No event ID provided.</div>';
+    } else {
+        // 确保端口是 3001
+        fetch(`http://localhost:3001/api/events/${eventId}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Event not found');
+                return response.json();
+            })
+            .then(data => {
+                // 注意：后端返回的可能是一个对象，也可能包在 data 里
+                // 根据你的 event_db.js，getEventById 直接返回对象 {...ev, tickets}
+                // 但你的 server.js 可能会包一层 { success: true, data: ... }
+                // 我们需要兼容一下
+                const event = data.data ? data.data : data; 
+                renderEvent(event);
+            })
+            .catch(err => {
+                console.error(err);
+                appDiv.innerHTML = `<div class="error">Failed to load event: ${err.message}</div>`;
+            });
+    }
+
+    function renderEvent(event) {
+        // 调试用：在 Console 打印真实数据，方便你以后自己查
+        console.log("Event Data:", event);
+
+        // 1. 安全获取数值，防止 NaN
+        const raised = parseFloat(event.raised_amount) || 0;
+        const goal = parseFloat(event.goal_amount) || 0;
+        const percentage = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+
+        // 2. 安全获取日期，防止 Invalid Date
+        const startDate = event.start_time ? new Date(event.start_time).toLocaleString() : 'TBD';
+        
+        // 3. 安全获取文本，防止 undefined
+        const title = event.title || 'Untitled Event';
+        const city = event.city || 'Unknown City';
+        const venue = event.venue || 'Unknown Venue';
+        const desc = event.full_desc || 'No description available.';
+        const category = event.category_name || 'General';
+        const image = event.hero_image_url || 'https://via.placeholder.com/800x300?text=No+Image';
+
+        // 4. 处理票务
+        let ticketsHtml = '';
+        if (event.tickets && event.tickets.length > 0) {
+            ticketsHtml = event.tickets.map(t => `
+                <li class="ticket-item">
+                    <span><strong>${t.name}</strong></span>
+                    <span>$${parseFloat(t.price).toFixed(2)}</span>
+                </li>
+            `).join('');
+        } else {
+            ticketsHtml = '<li class="ticket-item">Free Entry</li>';
+        }
+
+        // 5. 渲染 HTML
+        appDiv.innerHTML = `
+            <img src="${image}" alt="${title}" class="hero-image" onerror="this.src='https://via.placeholder.com/800x300?text=No+Image'">
+            
+            <div class="event-header">
+                <span class="badge">${category}</span>
+                <h1 class="event-title">${title}</h1>
+                <div class="event-meta">
+                    📍 ${venue}, ${city} <br>
+                    🕒 ${startDate}
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>About this Event</h3>
+                <p>${desc}</p>
+            </div>
+
+            <div class="section">
+                <h3>Fundraising Progress</h3>
+                <p>Raised: <strong>$${raised.toFixed(2)}</strong> of $${goal.toFixed(2)}</p>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: ${percentage}%"></div>
+                </div>
+                <p>${percentage}% funded</p>
+            </div>
+
+            <div class="section">
+                <h3>Tickets</h3>
+                <ul class="ticket-list">
+                    ${ticketsHtml}
+                </ul>
+                <button class="btn-register" onclick="alert('This feature is currently under construction.')">
+                    Register Now
+                </button>
+            </div>
+        `;
+    }
+</script>
+</body>
+</html>
