@@ -35,3 +35,4 @@ app.get('/api/events/:id', async (req,res)=>{
 });
 
 app.listen(PORT, ()=>console.log(`🚀 http://localhost:${PORT}`));
+// CRUD endpoints implementation finalized
