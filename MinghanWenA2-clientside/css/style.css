@@ -34,3 +34,4 @@ body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvet
 .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 .tickets { margin:0; padding-left:18px; }
 @media (max-width: 720px) { .grid-2 { grid-template-columns:1fr; } }
+/* search filter optimized */
